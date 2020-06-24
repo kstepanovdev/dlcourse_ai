@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def l2_regularization(W, reg_strength):
     """
     Computes L2 regularization loss on weights and its gradient
@@ -13,28 +12,75 @@ def l2_regularization(W, reg_strength):
       loss, single value - l2 regularization loss
       gradient, np.array same shape as W - gradient of weight by l2 loss
     """
-    # TODO: Copy from the previous assignment
-    raise Exception("Not implemented!")
+    loss = reg_strength * np.sum(W**2)
+    grad = 2 * W * reg_strength
+
     return loss, grad
 
+def softmax(predictions):
+    '''
+    Computes probabilities from scores
+    Arguments:
+      predictions, np array, shape is either (N) or (batch_size, N) -
+        classifier output
+    Returns:
+      probs, np array of the same shape as predictions -
+        probability for every class, 0..1
+    '''
+    # TODO implement softmax
+    # Your final implementation shouldn't have any loops
+
+    if predictions.ndim > 1:
+        predictions -= np.max(predictions, axis=1).transpose().reshape((predictions.shape[0], 1))
+        result = np.exp(predictions) / np.sum(np.exp(predictions), axis=1).transpose().reshape((predictions.shape[0], 1))
+    else:
+        predictions -= np.max(predictions)
+        result = np.exp(predictions) / np.sum(np.exp(predictions))
+
+    return result
+
+def cross_entropy_loss(probs, target_index):
+    '''
+    Computes cross-entropy loss
+    Arguments:
+      probs, np array, shape is either (N) or (batch_size, N) -
+        probabilities for every class
+      target_index: np array of int, shape is (1) or (batch_size) -
+        index of the true class for given sample(s)
+    Returns:
+      loss: single value
+    '''
+    # TODO implement cross-entropy
+    # Your final implementation shouldn't have any loops
+
+    if probs.ndim > 1:
+        ans = -np.sum(np.log(probs[np.arange(len(target_index)), target_index.reshape(1, -1)]))
+    else:
+        ans = -np.log(probs[target_index])
+
+    return ans
 
 def softmax_with_cross_entropy(preds, target_index):
     """
     Computes softmax and cross-entropy loss for model predictions,
     including the gradient
-
     Arguments:
       predictions, np array, shape is either (N) or (batch_size, N) -
         classifier output
       target_index: np array of int, shape is (1) or (batch_size) -
         index of the true class for given sample(s)
-
     Returns:
       loss, single value - cross-entropy loss
       dprediction, np array same shape as predictions - gradient of predictions by loss value
     """
     # TODO: Copy from the previous assignment
-    raise Exception("Not implemented!")
+
+    probs = softmax(preds)
+    loss = cross_entropy_loss(probs, target_index)
+    mask = np.zeros(probs.shape)
+    mask[np.arange(probs.shape[0]), target_index] = 1
+    
+    d_preds = (probs - mask) / preds.shape[0]
 
     return loss, d_preds
 
@@ -52,13 +98,15 @@ class Param:
 
 class ReLULayer:
     def __init__(self):
-        pass
+        self.relu = None
 
     def forward(self, X):
         # TODO: Implement forward pass
         # Hint: you'll need to save some information about X
         # to use it later in the backward pass
-        raise Exception("Not implemented!")
+        self.relu = np.where(X <= 0, 0, X)
+        return self.relu
+
 
     def backward(self, d_out):
         """
@@ -72,9 +120,8 @@ class ReLULayer:
         d_result: np array (batch_size, num_features) - gradient
           with respect to input
         """
-        # TODO: Implement backward pass
-        # Your final implementation shouldn't have any loops
-        raise Exception("Not implemented!")
+
+        d_result = d_out * np.where(self.relu > 0, 1, self.relu)
         return d_result
 
     def params(self):
@@ -91,7 +138,9 @@ class FullyConnectedLayer:
     def forward(self, X):
         # TODO: Implement forward pass
         # Your final implementation shouldn't have any loops
-        raise Exception("Not implemented!")
+        self.X = X
+
+        return np.matmul(X, self.W.value) + self.B.value
 
     def backward(self, d_out):
         """
@@ -115,7 +164,9 @@ class FullyConnectedLayer:
         # It should be pretty similar to linear classifier from
         # the previous assignment
 
-        raise Exception("Not implemented!")
+        self.W.grad += np.matmul(self.X.T, d_out)
+        self.B.grad += np.sum(d_out, axis=0)
+        d_input = np.matmul(d_out, self.W.value.T)
 
         return d_input
 
